@@ -31,7 +31,6 @@ jobs:
           git -C mu fetch --depth 1 origin 20b82927b64f4d601d4f01e1bb3312071e437ba5
           git -C mu checkout -q FETCH_HEAD
           git -C mu submodule update --init --depth 1 || true
-          git -C mu submodule status | head -20
 
           git clone --filter=blob:none https://github.com/UniXNU/UniXNU.git unixnu
           git -C unixnu fetch --depth 1 origin 8ec13bb1077502e53e8ba3b82c56842589b5c837
@@ -47,16 +46,28 @@ jobs:
           mkdir -p Platforms/OnePlus/kebabPkg/Drivers/KebabLogDxe
           cp ../files/KebabLogDxe.c ../files/KebabLogDxe.inf Platforms/OnePlus/kebabPkg/Drivers/KebabLogDxe/
           sed -i 's/EnableDisplayThread = 0x1/EnableDisplayThread = 0x0/' Binaries/kebab/RawFiles/uefiplat.cfg || true
-          grep -n "KebabLogDxe" Platforms/OnePlus/kebabPkg/kebab.dsc Platforms/OnePlus/kebabPkg/kebab.fdf
           cd ../unixnu/drivers/DarwinBoot
           git apply --whitespace=nowarn ../../../patch/darwinboot.patch || patch -p1 < ../../../patch/darwinboot.patch
           grep -n "PaintBand" DarwinBootPkg/Driver/DarwinBoot.c
+          cd ../../..
+          # bring UniXNU packages into the Mu-Silicium tree and add them to its search path
+          cp -r unixnu/package/UniXNUPkg mu/UniXNUPkg
+          cp -r unixnu/drivers/DarwinBoot/DarwinBootPkg mu/DarwinBootPkg
+          python3 - <<'PY'
+          p = 'mu/Platforms/OnePlus/kebabPkg/DeviceBuild.py'
+          s = open(p, encoding='utf-8').read()
+          needle = '        "Silicium-ACPI/Platforms/OnePlus",'
+          assert needle in s, 'PackagesPath anchor not found'
+          s = s.replace(needle, needle + '\n        "UniXNUPkg",\n        "DarwinBootPkg",', 1)
+          open(p, 'w', encoding='utf-8', newline='\n').write(s)
+          print('PackagesPath patched')
+          PY
+          grep -n "UniXNUPkg\|DarwinBootPkg" mu/Platforms/OnePlus/kebabPkg/DeviceBuild.py | head
 
       - name: build
         run: |
           set -euo pipefail
           cd mu
-          export PACKAGES_PATH="$PWD:$GITHUB_WORKSPACE/unixnu/package:$GITHUB_WORKSPACE/unixnu/drivers/DarwinBoot"
           python3 Platforms/OnePlus/kebabPkg/DeviceBuild.py --setup -t DEBUG 2>&1 | tail -40
           python3 Platforms/OnePlus/kebabPkg/DeviceBuild.py --update -t DEBUG 2>&1 | tail -40
           python3 Platforms/OnePlus/kebabPkg/DeviceBuild.py TARGET=DEBUG ENABLE_SECUREBOOT=0 FD_BASE=0x9fc00000 FD_SIZE=0x300000 FD_BLOCKS=0x300 DEVICE_MODEL=0 2>&1 | tail -80
