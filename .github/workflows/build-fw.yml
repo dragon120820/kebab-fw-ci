@@ -21,8 +21,8 @@ jobs:
           set -euo pipefail
           sudo apt-get update
           sudo apt-get install -y nasm iasl uuid-dev mono-devel python3-pip
-          python3 -m pip install --break-system-packages -q edk2-pytool-extensions edk2-pytool-library
-          python3 -c "import edk2toolext, sys; print('toolext ok', sys.version)"
+          python3 -m pip install --break-system-packages -q edk2-pytool-extensions edk2-pytool-library regex
+          python3 -c "import edk2toolext, regex, sys; print('deps ok', sys.version)"
 
       - name: sources
         run: |
