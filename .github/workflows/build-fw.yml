@@ -30,7 +30,9 @@ jobs:
           git clone --filter=blob:none https://github.com/Project-Silicium/Mu-Silicium.git mu
           git -C mu fetch --depth 1 origin 20b82927b64f4d601d4f01e1bb3312071e437ba5
           git -C mu checkout -q FETCH_HEAD
-          git -C mu submodule update --init --depth 1 || true
+          git -C mu submodule update --init --recursive --depth 1 || true
+          git -C mu/Mu_Basecore submodule update --init --recursive --depth 1 || true
+          git -C mu/Mu_Basecore submodule status | head
 
           git clone --filter=blob:none https://github.com/UniXNU/UniXNU.git unixnu
           git -C unixnu fetch --depth 1 origin 8ec13bb1077502e53e8ba3b82c56842589b5c837
