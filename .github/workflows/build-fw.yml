@@ -45,12 +45,12 @@ jobs:
           git apply --whitespace=nowarn ../patch/mu-silicium.patch || patch -p1 < ../patch/mu-silicium.patch
           mkdir -p Platforms/OnePlus/kebabPkg/Drivers/KebabLogDxe
           cp ../files/KebabLogDxe.c ../files/KebabLogDxe.inf Platforms/OnePlus/kebabPkg/Drivers/KebabLogDxe/
+          cp ../files/uefiplat-consistent.cfg Platforms/OnePlus/kebabPkg/RawFiles/uefiplat-consistent.cfg
           sed -i 's/EnableDisplayThread = 0x1/EnableDisplayThread = 0x0/' Binaries/kebab/RawFiles/uefiplat.cfg || true
           cd ../unixnu/drivers/DarwinBoot
           git apply --whitespace=nowarn ../../../patch/darwinboot.patch || patch -p1 < ../../../patch/darwinboot.patch
           grep -n "PaintBand" DarwinBootPkg/Driver/DarwinBoot.c
           cd ../../..
-          # bring UniXNU packages into the Mu-Silicium tree and add them to its search path
           cp -r unixnu/package/UniXNUPkg mu/UniXNUPkg
           cp -r unixnu/drivers/DarwinBoot/DarwinBootPkg mu/DarwinBootPkg
           python3 - <<'PY'
@@ -62,20 +62,17 @@ jobs:
           open(p, 'w', encoding='utf-8', newline='\n').write(s)
           print('PackagesPath patched')
           PY
-          # skip CI lint plugins (git/workspace assumptions do not hold here)
           mv mu/Mu_Basecore/BaseTools/Plugin/DebugMacroCheck/BuildPlugin/DebugMacroCheck_plug_in.yaml \
              mu/Mu_Basecore/BaseTools/Plugin/DebugMacroCheck/BuildPlugin/DebugMacroCheck_plug_in.yaml.disabled
           mv mu/Mu_Basecore/BaseTools/Plugin/OverrideValidation/OverrideValidation_plug_in.json \
              mu/Mu_Basecore/BaseTools/Plugin/OverrideValidation/OverrideValidation_plug_in.json.disabled
-          echo "plugins disabled"
+          echo "prep done"
 
       - name: build
         run: |
           set -euo pipefail
           cd mu
-          python3 Platforms/OnePlus/kebabPkg/DeviceBuild.py --setup -t DEBUG 2>&1 | tail -40
-          python3 Platforms/OnePlus/kebabPkg/DeviceBuild.py --update -t DEBUG 2>&1 | tail -40
-          python3 Platforms/OnePlus/kebabPkg/DeviceBuild.py TARGET=DEBUG ENABLE_SECUREBOOT=0 FD_BASE=0x9fc00000 FD_SIZE=0x300000 FD_BLOCKS=0x300 DEVICE_MODEL=0 2>&1 | tail -100
+          python3 Platforms/OnePlus/kebabPkg/DeviceBuild.py TARGET=DEBUG ENABLE_SECUREBOOT=0 FD_BASE=0x9fc00000 FD_SIZE=0x300000 FD_BLOCKS=0x300 DEVICE_MODEL=0 2>&1 | tail -120
 
       - name: verify
         run: |
