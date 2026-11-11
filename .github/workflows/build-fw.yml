@@ -43,7 +43,7 @@ jobs:
           set -euo pipefail
           cd mu
           git apply --whitespace=nowarn ../patch/mu-silicium.patch || patch -p1 < ../patch/mu-silicium.patch
-          mkdir -p Platforms/OnePlus/kebabPkg/Drivers/KebabLogDxe
+          mkdir -p Platforms/OnePlus/kebabPkg/Drivers/KebabLogDxe Platforms/OnePlus/kebabPkg/RawFiles
           cp ../files/KebabLogDxe.c ../files/KebabLogDxe.inf Platforms/OnePlus/kebabPkg/Drivers/KebabLogDxe/
           cp ../files/uefiplat-consistent.cfg Platforms/OnePlus/kebabPkg/RawFiles/uefiplat-consistent.cfg
           sed -i 's/EnableDisplayThread = 0x1/EnableDisplayThread = 0x0/' Binaries/kebab/RawFiles/uefiplat.cfg || true
