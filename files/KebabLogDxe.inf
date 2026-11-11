@@ -1,0 +1,36 @@
+## @file
+#  KebabLogDxe - writes a boot log to the `kernel_log` partition so a crash can
+#  be read back over 9008 instead of guessed from a black screen.
+#
+#  Copyright (c) 2026. SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = KebabLogDxe
+  FILE_GUID                      = 7E1B6C24-3A4D-4C8B-9E52-1B0A5D7C9F31
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = KebabLogEntry
+
+[Sources]
+  KebabLogDxe.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+
+[LibraryClasses]
+  BaseLib
+  DebugLib
+  BaseMemoryLib
+  MemoryAllocationLib
+  PrintLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+  UefiLib
+
+[Protocols]
+  gEfiBlockIoProtocolGuid
+  gEfiLoadedImageProtocolGuid
+
+[Depex]
+  TRUE

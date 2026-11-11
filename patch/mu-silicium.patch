@@ -1,0 +1,130 @@
+diff --git a/Platforms/OnePlus/kebabPkg/Include/APRIORI.inc b/Platforms/OnePlus/kebabPkg/Include/APRIORI.inc
+index 6a1e4f9..98b87f0 100644
+--- a/Platforms/OnePlus/kebabPkg/Include/APRIORI.inc
++++ b/Platforms/OnePlus/kebabPkg/Include/APRIORI.inc
+@@ -2,6 +2,9 @@ APRIORI DXE {
+   INF MdeModulePkg/Core/Dxe/DxeMain.inf
+   INF MdeModulePkg/Universal/PCD/Dxe/Pcd.inf
+ 
++  # Kebab: log to flash before anything else can die
++  INF kebabPkg/Drivers/KebabLogDxe/KebabLogDxe.inf
++
+   INF Binaries/kebab/QcomPkg/Drivers/EnvDxe/EnvDxe.inf
+ 
+   INF MdeModulePkg/Universal/ReportStatusCodeRouter/RuntimeDxe/ReportStatusCodeRouterRuntimeDxe.inf
+diff --git a/Platforms/OnePlus/kebabPkg/Include/DXE.inc b/Platforms/OnePlus/kebabPkg/Include/DXE.inc
+index 668d255..993a21d 100644
+--- a/Platforms/OnePlus/kebabPkg/Include/DXE.inc
++++ b/Platforms/OnePlus/kebabPkg/Include/DXE.inc
+@@ -4,7 +4,11 @@
+   INF MdeModulePkg/Core/RuntimeDxe/RuntimeDxe.inf
+   INF MdeModulePkg/Universal/SecurityStubDxe/SecurityStubDxe.inf
+ 
+-  INF Binaries/kebab/QcomPkg/Drivers/TzDxe/ScmDxeLA.inf
++  # ScmDxe crashes: the ASSERT dump shows LR = ScmDxe+0x1214 branching to
++  # 0x0B2FA6480, which lies outside every loaded image, and the CPU raises an
++  # undefined-instruction exception (ESR EC=0x00) there.  Commented out to see
++  # whether anything on the boot path to the UniXNU menu needs the SCM protocol.
++  #INF Binaries/kebab/QcomPkg/Drivers/TzDxe/ScmDxeLA.inf
+   #INF Binaries/kebab/QcomPkg/Drivers/TzDxe/TzDxeLA.inf
+ 
+   INF MdeModulePkg/Universal/WatchdogTimerDxe/WatchdogTimer.inf
+diff --git a/Platforms/OnePlus/kebabPkg/Include/RAW.inc b/Platforms/OnePlus/kebabPkg/Include/RAW.inc
+index 3f123ee..5aa414b 100644
+--- a/Platforms/OnePlus/kebabPkg/Include/RAW.inc
++++ b/Platforms/OnePlus/kebabPkg/Include/RAW.inc
+@@ -125,6 +125,18 @@
+   }
+ !endif
+ 
++  #
++  # The platform memory map.  EnvDxe reads this file out of the firmware
++  # volume and hands the regions to the DXE core; without it the map is empty,
++  # ArmCpuDxe has no place to put its exception vectors and faults on entry
++  # ("ERROR: CPU Vectors region not present in cfg file !").  The GUID is the
++  # one Qualcomm uses for uefiplat.cfg.
++  #
++  FILE FREEFORM = dde58710-41cd-4306-dbfb-3fa90bb1d2dd {
++    SECTION UI = "uefiplat.cfg"
++    SECTION RAW = Platforms/OnePlus/kebabPkg/RawFiles/uefiplat-consistent.cfg
++  }
++
+   FILE FREEFORM = A1E235DE-E825-4591-9623-C43175811826 {
+     SECTION UI = "SecParti.cfg"
+     SECTION RAW = Binaries/kebab/RawFiles/SecParti.cfg
+diff --git a/Platforms/OnePlus/kebabPkg/Library/MemoryMapLib/MemoryMapLib.c b/Platforms/OnePlus/kebabPkg/Library/MemoryMapLib/MemoryMapLib.c
+index 1e6d666..c98d322 100644
+--- a/Platforms/OnePlus/kebabPkg/Library/MemoryMapLib/MemoryMapLib.c
++++ b/Platforms/OnePlus/kebabPkg/Library/MemoryMapLib/MemoryMapLib.c
+@@ -19,6 +19,7 @@ gMemoryDescriptor[] = {
+   {"ABOOT FV",         0x9FA00000, 0x00200000, AddMem, SYS_MEM, SYS_MEM_CAP, Reserv, WRITE_BACK_XN},
+   {"UEFI FD",          0x9FC00000, 0x00300000, AddMem, SYS_MEM, SYS_MEM_CAP, BsData, WRITE_BACK},
+   {"SEC Heap",         0x9FF00000, 0x0008C000, AddMem, SYS_MEM, SYS_MEM_CAP, BsData, WRITE_BACK_XN},
++  {"CPU Vectors",      0x9FF8C000, 0x00001000, AddMem, SYS_MEM, SYS_MEM_CAP, BsData, WRITE_BACK},
+   {"MMU PageTables",   0x9FF8D000, 0x00003000, AddMem, SYS_MEM, SYS_MEM_CAP, BsData, WRITE_BACK_XN},
+   {"UEFI Stack",       0x9FF90000, 0x00040000, AddMem, SYS_MEM, SYS_MEM_CAP, BsData, WRITE_BACK_XN},
+   {"Log Buffer",       0x9FFF7000, 0x00008000, AddMem, SYS_MEM, SYS_MEM_CAP, RtData, WRITE_BACK_XN},
+diff --git a/Platforms/OnePlus/kebabPkg/kebab.dsc b/Platforms/OnePlus/kebabPkg/kebab.dsc
+index 767231c..6ccf17b 100644
+--- a/Platforms/OnePlus/kebabPkg/kebab.dsc
++++ b/Platforms/OnePlus/kebabPkg/kebab.dsc
+@@ -78,8 +78,32 @@
+   #
+   ConfigurationMapLib|kebabPkg/Library/ConfigurationMapLib/ConfigurationMapLib.inf
+ 
++  #
++  # UniXNU boot manager (layer 3) and its payload filesystem support.
++  # UniXNURamDiskDxe publishes the Mu-Silicium FDT initrd as a block device,
++  # so it needs the same HobLib/FdtLib the firmware already hands over.
++  #
++  HobLib|MdePkg/Library/DxeHobLib/DxeHobLib.inf
++  FdtLib|MdePkg/Library/BaseFdtLib/BaseFdtLib.inf
++  UniXNULib|UniXNUPkg/Library/UniXNULib/UniXNULib.inf
++
+ [Components]
++  #
++  # Boot log to the kernel_log partition (see Drivers/KebabLogDxe)
++  #
++  kebabPkg/Drivers/KebabLogDxe/KebabLogDxe.inf
++
+   #
+   # ACPI Tables
+   #
+   kebab/AcpiTables.inf
++
++  #
++  # UniXNU layer 3 (boot manager) and layer 4 (DarwinBoot loader).
++  # Without these the firmware can mount the payload volume but has nothing
++  # that reads EFI/UniXNU/unixnu.toml or loads Payloads/kernel.macho.
++  #
++  UniXNUPkg/Application/UniXNU/UniXNU.inf
++  UniXNUPkg/Driver/UniXNUDxe/UniXNUDxe.inf
++  UniXNUPkg/Driver/UniXNURamDiskDxe/UniXNURamDiskDxe.inf
++  DarwinBootPkg/Driver/DarwinBoot.inf
+diff --git a/Platforms/OnePlus/kebabPkg/kebab.fdf b/Platforms/OnePlus/kebabPkg/kebab.fdf
+index 171876d..c18c1da 100644
+--- a/Platforms/OnePlus/kebabPkg/kebab.fdf
++++ b/Platforms/OnePlus/kebabPkg/kebab.fdf
+@@ -80,6 +80,7 @@ READ_LOCK_CAP      = TRUE
+ READ_LOCK_STATUS   = TRUE
+ 
+   !include Include/APRIORI.inc
++  INF kebabPkg/Drivers/KebabLogDxe/KebabLogDxe.inf
+   !include Include/DXE.inc
+   !include Include/RAW.inc
+ 
+@@ -102,6 +103,14 @@ READ_LOCK_STATUS   = TRUE
+   #  SECTION UI = "DeviceTreeBlob"
+   #}
+ 
++  # UniXNU layer 3 (boot manager + payload filesystem) and layer 4 (DarwinBoot).
++  # They must be in the volume, not on the payload: UniXNURamDiskDxe is what
++  # publishes the payload FAT as a block device in the first place.
++  INF UniXNUPkg/Driver/UniXNURamDiskDxe/UniXNURamDiskDxe.inf
++  INF UniXNUPkg/Driver/UniXNUDxe/UniXNUDxe.inf
++  INF UniXNUPkg/Application/UniXNU/UniXNU.inf
++  INF DarwinBootPkg/Driver/DarwinBoot.inf
++
+   !include QcomPkg/Extra.fdf.inc
+ 
+ [FV.FVMAIN_COMPACT]

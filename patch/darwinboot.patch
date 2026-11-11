@@ -1,0 +1,50 @@
+diff --git a/DarwinBootPkg/Driver/DarwinBoot.c b/DarwinBootPkg/Driver/DarwinBoot.c
+index 3b6cafc..d2ffc98 100644
+--- a/DarwinBootPkg/Driver/DarwinBoot.c
++++ b/DarwinBootPkg/Driver/DarwinBoot.c
+@@ -490,6 +490,22 @@ DiagDraw (CONST CHAR16 *Text, UINTN Row)
+   }
+ }
+ 
++// Band probe: a solid horizontal stripe written straight into the framebuffer. Text output stops being
++// usable once boot services are gone, so colour is the only channel that survives the handoff.
++STATIC
++VOID
++PaintBand (UINT64 Base, UINT64 Stride, UINT64 Height, UINTN FirstRow, UINTN Rows, UINT32 Pixel)
++{
++  UINT32 *Fb;
++  UINTN  Y, X;
++
++  if ((Base == 0) || (Stride < 4) || (FirstRow + Rows > Height)) { return; }
++  for (Y = FirstRow; Y < FirstRow + Rows; Y++) {
++    Fb = (UINT32 *)(UINTN)(Base + Y * Stride);
++    for (X = 0; X < Stride / 4; X++) { Fb[X] = Pixel; }
++  }
++}
++
+ STATIC
+ EFI_STATUS
+ AllocateWindow (KERNEL *Kernel, UINT64 WindowSize, EFI_PHYSICAL_ADDRESS *Address)
+@@ -816,12 +832,21 @@ Boot (
+       if (Attempt == 0) { goto Fail; }
+       CpuDeadLoop ();
+     }
++    // Blue before the call: reaching here at all means the loader got past the memory-map handshake.
++    PaintBand (Video[0], Video[2], Video[4], 0, 24, 0x00FF0000);
+     Status = gBS->ExitBootServices (mImage, Key);
+     if (!EFI_ERROR (Status)) {
++      // Red: boot services really are gone. DarwinEnter paints green over the top of this, so a green
++      // screen means the whole chain ran and the kernel branch was taken.
++      PaintBand (Video[0], Video[2], Video[4], 24, 24, 0x000000FF);
+       DarwinEnter (ArgsAddress, Address + Kernel.Entry - Kernel.Base, Address, WindowSize, Video[0], Video[2] * Video[4]);
+       CpuDeadLoop ();
+     }
+-    if (Status != EFI_INVALID_PARAMETER) { CpuDeadLoop (); }
++    if (Status != EFI_INVALID_PARAMETER) {
++      // Yellow: the call returned something other than "map changed, retry", and the loader gave up.
++      PaintBand (Video[0], Video[2], Video[4], 48, 24, 0x0000FFFF);
++      CpuDeadLoop ();
++    }
+   }
+   CpuDeadLoop ();
+   return EFI_ABORTED;
