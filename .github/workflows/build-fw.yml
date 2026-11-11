@@ -32,13 +32,11 @@ jobs:
           git -C mu checkout -q FETCH_HEAD
           git -C mu submodule update --init --recursive --depth 1 || true
           git -C mu/Mu_Basecore submodule update --init --recursive --depth 1 || true
-          git -C mu/Mu_Basecore submodule status | head
 
           git clone --filter=blob:none https://github.com/UniXNU/UniXNU.git unixnu
           git -C unixnu fetch --depth 1 origin 8ec13bb1077502e53e8ba3b82c56842589b5c837
           git -C unixnu checkout -q FETCH_HEAD
           git -C unixnu submodule update --init --depth 1 drivers/DarwinBoot
-          git -C unixnu/drivers/DarwinBoot log --oneline -1
 
       - name: patch
         run: |
@@ -48,7 +46,7 @@ jobs:
           mkdir -p Platforms/OnePlus/kebabPkg/Drivers/KebabLogDxe Platforms/OnePlus/kebabPkg/RawFiles
           cp ../files/KebabLogDxe.c ../files/KebabLogDxe.inf Platforms/OnePlus/kebabPkg/Drivers/KebabLogDxe/
           cp ../files/uefiplat-consistent.cfg Platforms/OnePlus/kebabPkg/RawFiles/uefiplat-consistent.cfg
-          sed -i 's/EnableDisplayThread = 0x1/EnableDisplayThread = 0x0/' Binaries/kebab/RawFiles/uefiplat.cfg || true
+          grep -n "EnableDisplayThread" Binaries/kebab/RawFiles/uefiplat.cfg
           cd ../unixnu/drivers/DarwinBoot
           git apply --whitespace=nowarn ../../../patch/darwinboot.patch || patch -p1 < ../../../patch/darwinboot.patch
           grep -n "PaintBand" DarwinBootPkg/Driver/DarwinBoot.c
@@ -74,9 +72,9 @@ jobs:
         run: |
           set -euo pipefail
           cd mu
-          python3 Platforms/OnePlus/kebabPkg/DeviceBuild.py --setup -t DEBUG 2>&1 | tail -30
-          python3 Platforms/OnePlus/kebabPkg/DeviceBuild.py --update -t DEBUG 2>&1 | tail -30
-          python3 Platforms/OnePlus/kebabPkg/DeviceBuild.py TARGET=DEBUG ENABLE_SECUREBOOT=0 FD_BASE=0x9fc00000 FD_SIZE=0x300000 FD_BLOCKS=0x300 DEVICE_MODEL=0 2>&1 | tail -120
+          python3 Platforms/OnePlus/kebabPkg/DeviceBuild.py --setup -t DEBUG 2>&1 | tail -20
+          python3 Platforms/OnePlus/kebabPkg/DeviceBuild.py --update -t DEBUG 2>&1 | tail -20
+          python3 Platforms/OnePlus/kebabPkg/DeviceBuild.py TARGET=DEBUG ENABLE_SECUREBOOT=0 FD_BASE=0x9fc00000 FD_SIZE=0x300000 FD_BLOCKS=0x300 DEVICE_MODEL=0 2>&1 | tail -60
 
       - name: verify
         run: |
