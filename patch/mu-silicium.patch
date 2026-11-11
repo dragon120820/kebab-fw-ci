@@ -13,22 +13,20 @@ index 6a1e4f9..98b87f0 100644
  
    INF MdeModulePkg/Universal/ReportStatusCodeRouter/RuntimeDxe/ReportStatusCodeRouterRuntimeDxe.inf
 diff --git a/Platforms/OnePlus/kebabPkg/Include/DXE.inc b/Platforms/OnePlus/kebabPkg/Include/DXE.inc
-index 668d255..993a21d 100644
+index 668d255..a178e90 100644
 --- a/Platforms/OnePlus/kebabPkg/Include/DXE.inc
 +++ b/Platforms/OnePlus/kebabPkg/Include/DXE.inc
-@@ -4,7 +4,11 @@
+@@ -4,6 +4,10 @@
    INF MdeModulePkg/Core/RuntimeDxe/RuntimeDxe.inf
    INF MdeModulePkg/Universal/SecurityStubDxe/SecurityStubDxe.inf
  
--  INF Binaries/kebab/QcomPkg/Drivers/TzDxe/ScmDxeLA.inf
 +  # ScmDxe crashes: the ASSERT dump shows LR = ScmDxe+0x1214 branching to
 +  # 0x0B2FA6480, which lies outside every loaded image, and the CPU raises an
 +  # undefined-instruction exception (ESR EC=0x00) there.  Commented out to see
 +  # whether anything on the boot path to the UniXNU menu needs the SCM protocol.
-+  #INF Binaries/kebab/QcomPkg/Drivers/TzDxe/ScmDxeLA.inf
+   INF Binaries/kebab/QcomPkg/Drivers/TzDxe/ScmDxeLA.inf
    #INF Binaries/kebab/QcomPkg/Drivers/TzDxe/TzDxeLA.inf
  
-   INF MdeModulePkg/Universal/WatchdogTimerDxe/WatchdogTimer.inf
 diff --git a/Platforms/OnePlus/kebabPkg/Include/RAW.inc b/Platforms/OnePlus/kebabPkg/Include/RAW.inc
 index 3f123ee..5aa414b 100644
 --- a/Platforms/OnePlus/kebabPkg/Include/RAW.inc
