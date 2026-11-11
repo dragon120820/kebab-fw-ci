@@ -42,6 +42,12 @@ jobs:
         run: |
           set -euo pipefail
           cd mu
+          # Mu_Basecore patches that build_uefi.py would apply
+          for p in Auth-Service Boot-Manager Timer Usb-Bus; do
+            echo "apply $p"
+            git -C Mu_Basecore apply --whitespace=nowarn "../Resources/MuPatches/$p.patch" \
+              || patch -d Mu_Basecore -p1 < "Resources/MuPatches/$p.patch"
+          done
           git apply --whitespace=nowarn ../patch/mu-silicium.patch || patch -p1 < ../patch/mu-silicium.patch
           mkdir -p Platforms/OnePlus/kebabPkg/Drivers/KebabLogDxe Platforms/OnePlus/kebabPkg/RawFiles
           cp ../files/KebabLogDxe.c ../files/KebabLogDxe.inf Platforms/OnePlus/kebabPkg/Drivers/KebabLogDxe/
